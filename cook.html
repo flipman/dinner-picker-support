@@ -18,11 +18,14 @@ ol{margin:0;padding-left:1.5em}ol li{padding:0 0 18px 7px;margin-bottom:22px}li:
 [hidden]{display:none!important}</style></head>
 <body><main><header><p class="brand">Dinner Picker</p><h1 id="name">Cook with Dinner Picker</h1><p class="meta" id="yield"></p>
 <p class="hint" id="status" role="status">Loading your recipe…</p></header>
+<img id="recipe-photo" alt="Recipe photo" hidden style="width:100%;max-width:420px;height:auto;max-height:280px;object-fit:cover;border-radius:12px;margin-top:18px">
 <article class="columns" id="recipe" hidden aria-label="Recipe">
 <section><h2>Ingredients</h2><ul id="ingredients-list"></ul></section>
 <section><h2>Method</h2><ol id="steps-list"></ol></section></article>
 <footer><p class="hint">This is a recipe copy. Changes and checkmarks here stay on this page. Anyone with the cooking link can read the recipe.</p></footer>
 </main><script>function renderRecipe() {
+  const photo = document.getElementById("recipe-photo");
+  photo.hidden = true; photo.removeAttribute("src");
   document.getElementById("recipe").hidden = true;
   document.getElementById("ingredients-list").replaceChildren();
   document.getElementById("steps-list").replaceChildren();
@@ -32,7 +35,7 @@ ol{margin:0;padding-left:1.5em}ol li{padding:0 0 18px 7px;margin-bottom:22px}li:
   status.hidden = false;
   try {
     const hash = location.hash;
-    if (!hash.startsWith("#recipe=") || hash.length > 32008) throw new Error("link");
+    if (!hash.startsWith("#recipe=") || hash.length > 250008) throw new Error("link");
     let payload = hash.slice(8);
     if (!/^[A-Za-z0-9_-]+$/.test(payload)) throw new Error("link");
     payload = payload.replace(/-/g, "+").replace(/_/g, "/");
@@ -48,12 +51,15 @@ ol{margin:0;padding-left:1.5em}ol li{padding:0 0 18px 7px;margin-bottom:22px}li:
         || !recipe.recipeInstructions.every(x => x && x["@type"] === "HowToStep" && text(x.text, 24000))) {
       throw new Error("recipe");
     }
+    if (recipe.image !== undefined && (typeof recipe.image !== "string" || recipe.image.length > 180000
+        || !/^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(recipe.image))) throw new Error("image");
     // Whitelist recipe fields. Everything displayed is text, never HTML.
     const data = {
       "@context": "https://schema.org", "@type": "Recipe", name: recipe.name,
       recipeYield: recipe.recipeYield, recipeIngredient: recipe.recipeIngredient,
       recipeInstructions: recipe.recipeInstructions.map(step => ({"@type": "HowToStep", text: step.text}))
     };
+    if (recipe.image) { data.image = recipe.image; photo.src = recipe.image; photo.alt = recipe.name; photo.hidden = false; }
     const structured = document.createElement("script");
     structured.id = "cooking-data";
     structured.type = "application/ld+json";
