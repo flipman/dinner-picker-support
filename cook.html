@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer"><meta name="color-scheme" content="light dark">
+<title>Cook with Dinner Picker</title>
+<style>
+:root{color-scheme:light dark;--paper:#faf7ef;--card:#fffdf8;--text:#29241d;--muted:#696155;--line:#ded8cb;--accent:#a83c1d}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--text);font:1.1rem/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:900px;margin:auto;padding:28px 24px 60px}header{border-bottom:1px solid var(--line);padding-bottom:28px}
+.brand{color:var(--accent);font-weight:650;margin:0 0 22px}h1{font:600 clamp(2.3rem,6vw,3.8rem)/1.12 Georgia,serif;letter-spacing:-.025em;margin:0 0 18px}
+h2{font:600 1.65rem/1.25 Georgia,serif;margin-top:0}h3{font-size:1.12rem;line-height:1.4;margin:0 0 7px}p{margin:0 0 16px}.meta,.hint{color:var(--muted)}.hint{font-size:.95rem;max-width:65ch}a{color:var(--accent);text-underline-offset:4px}
+nav{display:flex;gap:24px}.columns{display:grid;grid-template-columns:minmax(220px,1fr) minmax(0,1.7fr);gap:36px;padding-top:32px}
+ul{list-style:none;margin:0;padding:0}li{border-bottom:1px solid var(--line)}label{display:flex;align-items:baseline;gap:12px;padding:13px 0;cursor:pointer}input{accent-color:var(--accent);width:20px;height:20px;flex-shrink:0}label:has(input:checked) span{text-decoration:line-through;color:var(--muted)}
+ol{margin:0;padding-left:1.5em}ol li{padding:0 0 18px 7px;margin-bottom:22px}li::marker{font-weight:700;color:var(--accent)}section{scroll-margin-top:20px}footer{border-top:1px solid var(--line);padding-top:24px;margin-top:30px}
+@media(max-width:640px){.columns{grid-template-columns:1fr;gap:30px}main{padding:24px 20px 42px}}
+@media(prefers-color-scheme:dark){:root{--paper:#191b18;--card:#22251f;--text:#f5f1e7;--muted:#b6b3a8;--line:#45483f;--accent:#ffa17d}}
+@media print{nav,.hint,footer{display:none}body{background:white;color:black}.columns{display:block}input{display:none}}
+
+[hidden]{display:none!important}</style></head>
+<body><main><header><p class="brand">Dinner Picker</p><h1 id="name">Cook with Dinner Picker</h1><p class="meta" id="yield"></p>
+<p class="hint" id="status" role="status">Loading your recipe…</p></header>
+<article class="columns" id="recipe" hidden aria-label="Recipe">
+<section><h2>Ingredients</h2><ul id="ingredients-list"></ul></section>
+<section><h2>Method</h2><ol id="steps-list"></ol></section></article>
+<footer><p class="hint">This is a recipe copy. Changes and checkmarks here stay on this page. Anyone with the cooking link can read the recipe.</p></footer>
+</main><script>(() => {
+  const status = document.getElementById("status");
+  try {
+    const hash = location.hash;
+    if (!hash.startsWith("#recipe=") || hash.length > 32008) throw new Error("link");
+    let payload = hash.slice(8);
+    if (!/^[A-Za-z0-9_-]+$/.test(payload)) throw new Error("link");
+    payload = payload.replace(/-/g, "+").replace(/_/g, "/");
+    payload += "=".repeat((4 - payload.length % 4) % 4);
+    const bytes = Uint8Array.from(atob(payload), c => c.charCodeAt(0));
+    const recipe = JSON.parse(new TextDecoder("utf-8", {fatal: true}).decode(bytes));
+    const text = (value, max) => typeof value === "string" && value.trim().length > 0 && value.length <= max;
+    if (recipe["@type"] !== "Recipe" || !text(recipe.name, 1000) || !text(recipe.recipeYield, 100)
+        || !Array.isArray(recipe.recipeIngredient) || recipe.recipeIngredient.length > 2000
+        || !recipe.recipeIngredient.every(x => text(x, 2000))
+        || !Array.isArray(recipe.recipeInstructions) || !recipe.recipeInstructions.length
+        || recipe.recipeInstructions.length > 2000
+        || !recipe.recipeInstructions.every(x => x && x["@type"] === "HowToStep" && text(x.text, 24000))) {
+      throw new Error("recipe");
+    }
+    // Whitelist recipe fields. Everything displayed is text, never HTML.
+    const data = {
+      "@context": "https://schema.org", "@type": "Recipe", name: recipe.name,
+      recipeYield: recipe.recipeYield, recipeIngredient: recipe.recipeIngredient,
+      recipeInstructions: recipe.recipeInstructions.map(step => ({"@type": "HowToStep", text: step.text}))
+    };
+    const structured = document.createElement("script");
+    structured.type = "application/ld+json";
+    structured.textContent = JSON.stringify(data).replace(/</g, "\\u003c");
+    document.head.append(structured);
+    document.title = recipe.name + " | Dinner Picker";
+    document.getElementById("name").textContent = recipe.name;
+    document.getElementById("yield").textContent = recipe.recipeYield;
+    for (const ingredient of recipe.recipeIngredient) {
+      const row = document.createElement("li");
+      const label = document.createElement("label");
+      const check = document.createElement("input"); check.type = "checkbox";
+      const content = document.createElement("span"); content.textContent = ingredient;
+      label.append(check, content); row.append(label);
+      document.getElementById("ingredients-list").append(row);
+    }
+    for (const step of recipe.recipeInstructions) {
+      const row = document.createElement("li");
+      const content = document.createElement("p"); content.textContent = step.text;
+      row.append(content); document.getElementById("steps-list").append(row);
+    }
+    status.textContent = "On HomeView, look for Safari’s Start Cooking option. To transfer from your iPhone, open this page in Safari and bring the phone near HomeView.";
+    document.getElementById("recipe").hidden = false;
+  } catch {
+    status.textContent = "This cooking link is missing or incomplete. Open the recipe in Dinner Picker, choose Share recipe, then Cook on HomeView to create a new link.";
+    document.getElementById("name").textContent = "Open a recipe from Dinner Picker";
+  }
+})();</script></body></html>
