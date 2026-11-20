@@ -29,6 +29,7 @@ ol{margin:0;padding-left:1.5em}ol li{padding:0 0 18px 7px;margin-bottom:22px}li:
   document.getElementById("yield").textContent = "";
   document.getElementById("cooking-data")?.remove();
   const status = document.getElementById("status");
+  status.hidden = false;
   try {
     const hash = location.hash;
     if (!hash.startsWith("#recipe=") || hash.length > 32008) throw new Error("link");
@@ -74,7 +75,8 @@ ol{margin:0;padding-left:1.5em}ol li{padding:0 0 18px 7px;margin-bottom:22px}li:
       const content = document.createElement("p"); content.textContent = step.text;
       row.append(content); document.getElementById("steps-list").append(row);
     }
-    status.textContent = "On HomeView, look for Safari’s Start Cooking option. To transfer from your iPhone, open this page in Safari and bring the phone near HomeView.";
+    status.textContent = "";
+    status.hidden = true;
     document.getElementById("recipe").hidden = false;
   } catch {
     status.textContent = "This cooking link is missing or incomplete. Open the recipe in Dinner Picker, choose Share recipe, then Cook on HomeView to create a new link.";
