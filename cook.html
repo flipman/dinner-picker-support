@@ -22,7 +22,12 @@ ol{margin:0;padding-left:1.5em}ol li{padding:0 0 18px 7px;margin-bottom:22px}li:
 <section><h2>Ingredients</h2><ul id="ingredients-list"></ul></section>
 <section><h2>Method</h2><ol id="steps-list"></ol></section></article>
 <footer><p class="hint">This is a recipe copy. Changes and checkmarks here stay on this page. Anyone with the cooking link can read the recipe.</p></footer>
-</main><script>(() => {
+</main><script>function renderRecipe() {
+  document.getElementById("recipe").hidden = true;
+  document.getElementById("ingredients-list").replaceChildren();
+  document.getElementById("steps-list").replaceChildren();
+  document.getElementById("yield").textContent = "";
+  document.getElementById("cooking-data")?.remove();
   const status = document.getElementById("status");
   try {
     const hash = location.hash;
@@ -49,6 +54,7 @@ ol{margin:0;padding-left:1.5em}ol li{padding:0 0 18px 7px;margin-bottom:22px}li:
       recipeInstructions: recipe.recipeInstructions.map(step => ({"@type": "HowToStep", text: step.text}))
     };
     const structured = document.createElement("script");
+    structured.id = "cooking-data";
     structured.type = "application/ld+json";
     structured.textContent = JSON.stringify(data).replace(/</g, "\\u003c");
     document.head.append(structured);
@@ -74,4 +80,6 @@ ol{margin:0;padding-left:1.5em}ol li{padding:0 0 18px 7px;margin-bottom:22px}li:
     status.textContent = "This cooking link is missing or incomplete. Open the recipe in Dinner Picker, choose Share recipe, then Cook on HomeView to create a new link.";
     document.getElementById("name").textContent = "Open a recipe from Dinner Picker";
   }
-})();</script></body></html>
+}
+renderRecipe();
+window.addEventListener("hashchange", renderRecipe);</script></body></html>
